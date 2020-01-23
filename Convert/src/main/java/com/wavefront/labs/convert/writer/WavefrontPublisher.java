@@ -11,10 +11,14 @@ import com.wavefront.rest.api.client.UserApi;
 import com.wavefront.rest.models.Alert;
 import com.wavefront.rest.models.Dashboard;
 import com.wavefront.rest.models.MaintenanceWindow;
+import com.wavefront.rest.models.TargetInfo;
 import com.wavefront.rest.models.UserToCreate;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Properties;
 
 public class WavefrontPublisher implements Writer {
@@ -62,12 +66,16 @@ public class WavefrontPublisher implements Writer {
 			} else {
 				dashboardApi.createDashboard(dashboard);
 			}
-			Tracker.increment("\"WavefrontPublisher::writeDashboard Successful (Count)\"");
+			Tracker.increment("WavefrontPublisher::writeDashboard Successful (Count)");
 		} catch (ApiException e) {
 			logger.error("API Exception creating dashboard: " + dashboard.getName(), e);
-			Tracker.increment("\"WavefrontPublisher::writeDashboard Exception (Count)\"");
-			System.out.println(new com.wavefront.rest.api.JSON().serialize(dashboard));
+			Tracker.increment("WavefrontPublisher::writeDashboard Exception (Count)");
 		}
+	}
+
+	@Override
+	public void writeAlertTarget(TargetInfo alertTarget) {
+
 	}
 
 	@Override
@@ -89,10 +97,10 @@ public class WavefrontPublisher implements Writer {
 			} else {
 				alertApi.createAlert(alert);
 			}
-			Tracker.increment("\"WavefrontPublisher::writeAlert Successful (Count)\"");
+			Tracker.increment("WavefrontPublisher::writeAlert Successful (Count)");
 		} catch (ApiException e) {
 			logger.error("API Exception creating alert: " + alert.getName(), e);
-			Tracker.increment("\"WavefrontPublisher::writeAlert Exception (Count)\"");
+			Tracker.increment("WavefrontPublisher::writeAlert Exception (Count)");
 			System.out.println(new com.wavefront.rest.api.JSON().serialize(alert));
 		}
 	}

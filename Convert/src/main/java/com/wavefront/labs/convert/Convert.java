@@ -45,7 +45,7 @@ public class Convert {
 		}
 
 		logger.info("Convert to Wavefront finished!");
-		logger.info(Tracker.map);
+		Tracker.getSummary();
 	}
 
 
@@ -110,6 +110,12 @@ public class Convert {
 				}
 				addTags(dashboard.getTags(), tags);
 				writer.writeDashboard(dashboard);
+
+			} else if (model instanceof TargetInfo) {
+				TargetInfo alertTarget = (TargetInfo) model;
+				logger.info("Writing Alert Target: " + alertTarget.getName());
+
+				writer.writeAlertTarget(alertTarget);
 
 			} else if (model instanceof Alert) {
 				Alert alert = (Alert) model;

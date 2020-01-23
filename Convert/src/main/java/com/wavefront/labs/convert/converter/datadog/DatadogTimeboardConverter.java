@@ -46,14 +46,26 @@ public class DatadogTimeboardConverter extends AbstractDatadogConverter {
 
 	@Override
 	public List<Object> convert() {
+		if (!Tracker.map.containsKey("list")) { Tracker.map.put("list", new LinkedList()); }
+		if (!Tracker.map.containsKey("url")) { Tracker.map.put("url", new HashMap()); }
+		if (!Tracker.map.containsKey("title")) { Tracker.map.put("title", new HashMap()); }
 
 		logger.info("Converting Datadog Timeboard: " + datadogTimeboard.getId() + "/" + datadogTimeboard.getTitle());
 
 		expressionBuilder.initVariablesMap(datadogTimeboard.getTemplateVariables());
 
 		Dashboard dashboard = new Dashboard();
-		dashboard.setUrl(Utils.sluggify(datadogTimeboard.getTitle()));
-		dashboard.setName(datadogTimeboard.getTitle());
+		String url = Utils.sluggify(datadogTimeboard.getTitle());
+		int dashNum = ((Map) Tracker.map.get("url")).get(url) == null ? 1 : (Integer.valueOf(((Map) Tracker.map.get("url")).get(url).toString()) + 1);
+		((Map) Tracker.map.get("url")).put(url, dashNum);
+		url += (dashNum == 1 ? "" : ("__" + dashNum));
+		String title = datadogTimeboard.getTitle();
+		int titleNum = ((Map) Tracker.map.get("title")).get(title) == null ? 1 : (Integer.valueOf(((Map) Tracker.map.get("title")).get(title).toString()) + 1);
+		((Map) Tracker.map.get("title")).put(title, titleNum);
+		title += (titleNum == 1 ? "" : (" (" + titleNum + ")"));
+		((List) Tracker.map.get("list")).add(Arrays.asList(new String[]{url, title}));
+		dashboard.setUrl(url);
+		dashboard.setName(title);
 		dashboard.setDescription(datadogTimeboard.getDescription());
 
 		dashboard.setDisplayDescription(false);
@@ -66,7 +78,8 @@ public class DatadogTimeboardConverter extends AbstractDatadogConverter {
 		if (variablesMap.size() > 0) {
 			Map<String, DashboardParameterValue> dashboardParameters = new HashMap<>();
 			for (Variable variable : variablesMap.values()) {
-				dashboardParameters.put(variable.getName(), createDashboardParameter(variable));
+				DashboardParameterValue param = createDashboardParameter(variable);
+				dashboardParameters.put(param.getLabel(), param);
 			}
 			dashboard.setParameterDetails(dashboardParameters);
 			dashboard.setDisplayQueryParameters(true);
@@ -104,8 +117,8 @@ public class DatadogTimeboardConverter extends AbstractDatadogConverter {
 					}
 				} catch (Exception ex) {
 					logger.error("Exception while creating chart", ex);
-					Tracker.addToList("\"Chart Creation Exception\"", "Dashboard (" + datadogTimeboard.getTitle() + ") Chart (" + widgets.get(i).getDefinition().getTitle() + ")");
-					Tracker.increment("\"Chart Creation Exception Count\"");
+					Tracker.addToList("Chart Creation Exception", "Dashboard (" + datadogTimeboard.getTitle() + ") Chart (" + widgets.get(i).getDefinition().getTitle() + ")");
+					Tracker.increment("Chart Creation Exception Count");
 				}
 				if (!dashboard.getSections().contains(dashboardSection)) {
 					dashboard.addSectionsItem(dashboardSection);
@@ -195,15 +208,36 @@ public class DatadogTimeboardConverter extends AbstractDatadogConverter {
 	private DashboardParameterValue createDashboardParameter(Variable variable) {
 		DashboardParameterValue dashboardParameterValue = new DashboardParameterValue();
 
-		dashboardParameterValue.setParameterType(ParameterTypeEnum.DYNAMIC);
-		dashboardParameterValue.setLabel(variable.getName());
-		dashboardParameterValue.setDynamicFieldType(DashboardParameterValue.DynamicFieldTypeEnum.TAG_KEY);
-		dashboardParameterValue.setQueryValue("ts(system.load15)");
-		//dashboardParameterValue.setDefaultValue(variable.getValue());
-		dashboardParameterValue.setDefaultValue("production");
-		//dashboardParameterValue.setTagKey(variable.getTagName());
-		dashboardParameterValue.setTagKey("cht_env");
-		dashboardParameterValue.putValuesToReadableStringsItem("Label", "production");
+		if (variable.getTagName() != null && !variable.getTagName().trim().equals("")) {
+			dashboardParameterValue.setParameterType(ParameterTypeEnum.DYNAMIC);
+			dashboardParameterValue.setLabel(variable.getName());
+			dashboardParameterValue.setDynamicFieldType(DashboardParameterValue.DynamicFieldTypeEnum.TAG_KEY);
+			StringBuffer sb = new StringBuffer();
+			sb.append("collect(");
+			boolean firstMetric = true;
+			for (String metric : expressionBuilder.getMetricsSet()) {
+				if (firstMetric) {
+					firstMetric = false;
+				} else {
+					sb.append(",");
+				}
+				sb.append("ts(").append(metric).append(")");
+			}
+			sb.append(",taggify(1, ").append(variable.getTagName()).append(", \"*\"))");
+			dashboardParameterValue.setQueryValue(sb.toString());
+			dashboardParameterValue.setDefaultValue("*");
+			dashboardParameterValue.setTagKey(variable.getTagName());
+			dashboardParameterValue.putValuesToReadableStringsItem("Label", variable.getValue());
+		} else {
+			// Handling for filters not properly defined in Datadog.
+			// Creating dummy filters in order to support the variables.
+			dashboardParameterValue.setParameterType(ParameterTypeEnum.SIMPLE);
+			dashboardParameterValue.setLabel(variable.getName());
+			dashboardParameterValue.setDefaultValue("Label");
+			dashboardParameterValue.setValue("*");
+			dashboardParameterValue.putValuesToReadableStringsItem("Label", "source=*");
+			dashboardParameterValue.hideFromView(true);
+		}
 
 		return dashboardParameterValue;
 	}

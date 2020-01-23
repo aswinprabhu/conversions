@@ -29,6 +29,8 @@ public class DatadogConverter extends AbstractDatadogConverter {
 		} else {
 			if (Boolean.parseBoolean(properties.getProperty("datadog.timeboard.enabled", "true"))) {
 				converter = new DatadogTimeboardConverter();
+			} else if (Boolean.parseBoolean(properties.getProperty("datadog.alertTarget.enabled", "true"))) {
+				converter = new DatadogAlertTargetConverter();
 			} else if (Boolean.parseBoolean(properties.getProperty("datadog.alert.enabled", "true"))) {
 				converter = new DatadogAlertConverter();
 			} else {

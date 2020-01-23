@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.List;
 
-@JsonIgnoreProperties({"autoscale", "status", "markers", "style", "group", "no_metric_hosts", "scope", "no_group_hosts", "notes", "show_legend", "legend_size", "text_align", "custom_unit", "size_by", "tick_pos", "color_by_groups", "node_type", "show_tick", "compare_to", "xaxis", "color_by", "events", "tick_edge", "q", "group_by", "content", "font_size", "background_color", "precision", "layout_type", "title_size", "title_align", "color", "viz_type", "url", "time", "text", "alert_id", "tags_execution", "sizing", "query", "sort", "tags", "event_size", "margin", "count", "check", "hide_zero_counts", "grouping", "unit", "start", "color_preference", "display_format"})
+@JsonIgnoreProperties({"autoscale", "status", "markers", "style", "group", "no_metric_hosts", "scope", "no_group_hosts", "notes", "show_legend", "legend_size", "text_align", "custom_unit", "size_by", "tick_pos", "color_by_groups", "node_type", "show_tick", "compare_to", "xaxis", "color_by", "events", "tick_edge", "q", "group_by", "content", "font_size", "background_color", "precision", "layout_type", "title_size", "title_align", "color", "viz_type", "url", "time", "text", "alert_id", "tags_execution", "sizing", "query", "sort", "tags", "event_size", "margin", "count", "check", "hide_zero_counts", "grouping", "unit", "start", "color_preference", "display_format", "show_last_triggered"})
 public class DatadogGraphDefinition {
 
 	private String type;

@@ -82,6 +82,8 @@ public class DatadogExpressionBuilder extends DefaultExpressionBuilder {
 	private String underscoreReplace;
 	private HashMap<String, com.wavefront.labs.convert.converter.datadog.query.Variable> variablesMap;
 	private Set<String> dropTags;
+	private Set<String> metricsSet;
+	public static Set<String> allMetrics = new HashSet<String>();
 
 	@Override
 	public void init(Properties properties) {
@@ -90,6 +92,7 @@ public class DatadogExpressionBuilder extends DefaultExpressionBuilder {
 		underscoreReplace = properties.getProperty("datadog.underscoreReplace", ".");
 		dropTags = Arrays.stream(properties.getProperty("datadog.dropTags", "").split(",")).collect(Collectors.toSet());
 		variablesMap = new HashMap();
+		metricsSet = new HashSet<String>();
 	}
 
 	@Override
@@ -119,6 +122,10 @@ public class DatadogExpressionBuilder extends DefaultExpressionBuilder {
 			} else {
 				DatadogQuery datadogQuery = new DatadogQuery(query);
 				ts.append(convertDatadogQuery(datadogQuery));
+				if (datadogQuery.getMetric() != null) {
+					metricsSet.add(datadogQuery.getMetric());
+					allMetrics.add(datadogQuery.getMetric());
+				}
 			}
 		}
 
@@ -167,7 +174,7 @@ public class DatadogExpressionBuilder extends DefaultExpressionBuilder {
 			if (groups != null && groups.size() > 0) {
 				StringJoiner aggGroups = new StringJoiner(", ", ", ", "");
 				for (String group : groups) {
-					if (group.equals("host")) {
+					if (group.equals("host") || group.equals("name")) {
 						aggGroups.add("sources");
 					} else {
 						if (!dropTags.contains(group)) {
@@ -225,7 +232,7 @@ public class DatadogExpressionBuilder extends DefaultExpressionBuilder {
 										}
 									}
 								}
-								Tracker.increment("\"Ignored Filters In Chart Count\"");
+								Tracker.increment("Ignored Filters In Chart Count");
 
 							} else {
 								String[] scopeParts = scope.split(":");
@@ -234,7 +241,13 @@ public class DatadogExpressionBuilder extends DefaultExpressionBuilder {
 									if (!dropTags.contains(scopeParts[0])) {
 										String tagName = buildName(scopeParts[0], "tagName");
 										String tagValue = buildName(scopeParts[1], "tagValue");
-										filterValue = tagName + "=\"" + tagValue + "\"";
+										if (datadogQuery.getMetric() != null &&
+												(datadogQuery.getMetric().startsWith("mysql") ||
+														(datadogQuery.getMetric().startsWith("system")))) {
+											filterValue = "tag=\"" + tagName + ":" + tagValue + "\"";
+										} else {
+											filterValue = tagName + "=\"" + tagValue + "\"";
+										}
 									}
 								} else if (!dropTags.contains(scope)) {
 									String tagName = buildName(scope, "tagName");
@@ -298,6 +311,7 @@ public class DatadogExpressionBuilder extends DefaultExpressionBuilder {
 	public void initVariablesMap(List<DatadogTemplateVariable> templateVariables) {
 
 		variablesMap = new HashMap();
+		metricsSet = new HashSet<String>();
 
 		if (templateVariables != null) {
 			for (DatadogTemplateVariable templateVariable : templateVariables) {
@@ -337,4 +351,7 @@ public class DatadogExpressionBuilder extends DefaultExpressionBuilder {
 		return variablesMap;
 	}
 
+	public Set<String> getMetricsSet() {
+		return metricsSet;
+	}
 }

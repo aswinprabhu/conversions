@@ -15,12 +15,14 @@ public class DatadogApiConverter extends AbstractDatadogConverter {
 	private static final Logger logger = LogManager.getLogger(DatadogApiConverter.class);
 
 	private List<DatadogTimeboardConverter> dashboardConverters;
+	private List<DatadogAlertTargetConverter> alertTargetConverters;
 	private List<DatadogAlertConverter> alertConverters;
 
 	@Override
 	public void init(Properties properties) {
 		super.init(properties);
 		dashboardConverters = new ArrayList<>();
+		alertTargetConverters = new ArrayList<>();
 		alertConverters = new ArrayList<>();
 	}
 
@@ -28,19 +30,24 @@ public class DatadogApiConverter extends AbstractDatadogConverter {
 	public void parse(Object data) throws IOException {
 
 		if (Boolean.parseBoolean(properties.getProperty("datadog.timeboard.enabled", "true"))) {
-			String url = getBaseApiUrl("dasbhoard");
+			String url = getBaseApiUrl("dashboard");
 			ObjectMapper mapper = new ObjectMapper();
 			List<HashMap<Object, Object>> dashes = mapper.convertValue(mapper.readTree(new URL(url)).get("dashboards"), new TypeReference<List<HashMap<Object, Object>>>() {
 			});
 			processDashboards(dashes);
 		}
 
-		if (Boolean.parseBoolean(properties.getProperty("datadog.alert.enabled", "true"))) {
+		if (Boolean.parseBoolean(properties.getProperty("datadog.alert.enabled", "true")) || Boolean.parseBoolean(properties.getProperty("datadog.alertTarget.enabled", "true"))) {
 			String url = getBaseApiUrl("monitor");
 			ObjectMapper mapper = new ObjectMapper();
 			List<HashMap<Object, Object>> alerts = mapper.convertValue(mapper.readTree(new URL(url)), new TypeReference<List<HashMap<Object, Object>>>() {
 			});
-			processAlerts(alerts);
+			if (Boolean.parseBoolean(properties.getProperty("datadog.alert.enabled", "true"))) {
+				processAlerts(alerts);
+			}
+			if (Boolean.parseBoolean(properties.getProperty("datadog.alertTarget.enabled", "true"))) {
+				processAlertTargets(alerts);
+			}
 		}
 
 	}
@@ -60,7 +67,7 @@ public class DatadogApiConverter extends AbstractDatadogConverter {
 					converter.init(properties);
 					converter.parse(dash.get("id").toString());
 					dashboardConverters.add(converter);
-					Tracker.increment("\"Dashboards Successfully Parsed (count)\"");
+					Tracker.increment("Dashboards Successfully Parsed (count)");
 				}
 			}
 		}
@@ -82,11 +89,31 @@ public class DatadogApiConverter extends AbstractDatadogConverter {
 					converter.init(properties);
 					converter.parse(alert.get("id").toString());
 					alertConverters.add(converter);
-					Tracker.increment("\"Alerts Successfully Parsed (count)\"");
+					Tracker.increment("Alerts Successfully Parsed (count)");
 				}
 			}
 		}
+	}
 
+	private void processAlertTargets(List<HashMap<Object, Object>> alerts) throws IOException {
+
+		String titleMatch = properties.getProperty("datadog.alert.titleMatch", ".*");
+		Pattern titlePattern = Pattern.compile(titleMatch);
+
+		for (HashMap<Object, Object> alert : alerts) {
+			if (alert.containsKey("id")) {
+
+				String name = alert.get("name").toString();
+				if (titlePattern.matcher(name).matches()) {
+
+					DatadogAlertTargetConverter converter = new DatadogAlertTargetConverter();
+					converter.init(properties);
+					converter.parse(alert.get("id").toString());
+					alertTargetConverters.add(converter);
+					Tracker.increment("Alert Targets Successfully Parsed (count)");
+				}
+			}
+		}
 	}
 
 	@Override
@@ -98,10 +125,22 @@ public class DatadogApiConverter extends AbstractDatadogConverter {
 			for (DatadogTimeboardConverter converter : dashboardConverters) {
 				try {
 					models.addAll(converter.convert());
-					Tracker.increment("\"DatadogTimeboardConverter::convert Successful (count)\"");
+					Tracker.increment("DatadogTimeboardConverter::convert Successful (count)");
 				} catch (Exception e) {
 					logger.error("Exception during Dashboard convert", e);
-					Tracker.increment("\"DatadogTimeboardConverter::convert Exception (count)\"");
+					Tracker.increment("DatadogTimeboardConverter::convert Exception (count)");
+				}
+			}
+		}
+
+		if (Boolean.parseBoolean(properties.getProperty("datadog.alertTarget.enabled", "true"))) {
+			for (DatadogAlertTargetConverter converter : alertTargetConverters) {
+				try {
+					models.addAll(converter.convert());
+					Tracker.increment("DatadogAlertTargetConverter::convert Successful (count)");
+				} catch (Exception e) {
+					logger.error("Exception during Alert convert", e);
+					Tracker.increment("DatadogAlertTargetConverter::convert Exception (count)");
 				}
 			}
 		}
@@ -110,10 +149,10 @@ public class DatadogApiConverter extends AbstractDatadogConverter {
 			for (DatadogAlertConverter converter : alertConverters) {
 				try {
 					models.addAll(converter.convert());
-					Tracker.increment("\"DatadogAlertConverter::convert Successful (count)\"");
+					Tracker.increment("DatadogAlertConverter::convert Successful (count)");
 				} catch (Exception e) {
 					logger.error("Exception during Alert convert", e);
-					Tracker.increment("\"DatadogAlertConverter::convert Exception (count)\"");
+					Tracker.increment("DatadogAlertConverter::convert Exception (count)");
 				}
 			}
 		}
