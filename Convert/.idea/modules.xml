@@ -2,8 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Convert.iml" filepath="$PROJECT_DIR$/Convert.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../wavefront-java-sdk/wavefront-java-sdk.iml" filepath="$PROJECT_DIR$/../wavefront-java-sdk/wavefront-java-sdk.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Convert.iml" filepath="$PROJECT_DIR$/.idea/Convert.iml" />
     </modules>
   </component>
 </project>

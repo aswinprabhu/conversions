@@ -4,7 +4,7 @@
     <root id="archive" name="convert-uber.jar">
       <element id="module-output" name="Convert" />
       <element id="directory" name="META-INF">
-        <element id="file-copy" path="$PROJECT_DIR$/src/MANIFEST/MANIFEST.MF" />
+        <element id="file-copy" path="$PROJECT_DIR$/src/main/java/MANIFEST/MANIFEST.MF" />
       </element>
       <element id="module-output" name="wf-java-sdk" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/fasterxml/jackson/core/jackson-databind/2.9.2/jackson-databind-2.9.2.jar" path-in-jar="/" />
